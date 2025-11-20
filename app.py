@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
-
+import altair as alt
 # =============================
 # PAGE CONFIG
 # =============================
@@ -132,16 +131,43 @@ st.bar_chart(filtered_df.groupby("Weather_Condition")["Congestion_Index"].mean()
 # =============================
 # HEATMAP (NEW)
 # =============================
-st.subheader("🔥 Traffic Correlation Heatmap")
+st.subheader("🔥 Correlation Heatmap")
 
-numerics = filtered_df[["Speed_KMPH","Road_Occupancy_Percent","Congestion_Index","Travel_Delay_Minutes","Delay_Factor"]]
-corr = numerics.corr()
+num_df = filtered_df[[
+    "Speed_KMPH",
+    "Road_Occupancy_Percent",
+    "Congestion_Index",
+    "Travel_Delay_Minutes",
+    "Delay_Factor"
+]]
 
-fig = px.imshow(
-    corr,
-    text_auto=True,
-    title="Correlation Heatmap (Mobility Patterns)",
-    aspect="auto",
+corr = num_df.corr().reset_index().melt("index")
+corr.columns = ["Feature1", "Feature2", "Correlation"]
+
+heatmap = (
+    alt.Chart(corr)
+    .mark_rect()
+    .encode(
+        x=alt.X("Feature2:O", sort=None, title=""),
+        y=alt.Y("Feature1:O", sort=None, title=""),
+        color=alt.Color(
+            "Correlation:Q",
+            scale=alt.Scale(scheme="blues", domain=[-1, 1])
+        ),
+        tooltip=["Feature1", "Feature2", "Correlation"]
+    )
+    .properties(width=350, height=350)
 )
 
-st.plotly_chart(fig, use_container_width=True)
+text = (
+    alt.Chart(corr)
+    .mark_text(color="black")
+    .encode(
+        x="Feature2:O",
+        y="Feature1:O",
+        text=alt.Text("Correlation:Q", format=".2f"),
+    )
+)
+
+st.altair_chart(heatmap + text, use_container_width=True)
+
