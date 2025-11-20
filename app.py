@@ -39,7 +39,7 @@ str_cols = df.select_dtypes(include=['object']).columns
 df[str_cols] = df[str_cols].apply(lambda x: x.str.strip().str.title())
 
 df['License_Plate'] = df['License_Plate'].str.upper()
-df['Incident_Type'] = df['Incident_Type'].str.replace(r'[^A-Za-Z ]','', regex=True)
+df['Incident_Type'] = df['Incident_Type'].str.replace(r'[^A-Za-z ]','')
 
 df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
 df['Hour'] = df['Timestamp'].dt.hour
@@ -115,4 +115,5 @@ st.bar_chart(filtered_df["Vehicle_Type"].value_counts())
 
 st.subheader("🌧 Weather Impact")
 st.bar_chart(filtered_df.groupby("Weather_Condition")["Congestion_Index"].mean())
+
 
