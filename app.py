@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.express as px
 
 # =============================
 # PAGE CONFIG
@@ -9,7 +10,6 @@ st.set_page_config(page_title="🚦 City Mobility & Pollution Insights", layout=
 
 # =============================
 # SAMPLE LOCAL DATASET
-# (Replace with your actual df after testing)
 # =============================
 data = {
     "Record_ID": range(1, 11),
@@ -33,7 +33,6 @@ df = pd.DataFrame(data)
 
 # =============================
 # CLEANING & FEATURE ENGINEERING
-# (Your original code)
 # =============================
 str_cols = df.select_dtypes(include=['object']).columns
 df[str_cols] = df[str_cols].apply(lambda x: x.str.strip().str.title())
@@ -74,15 +73,24 @@ df['Delay_Factor'] = df['Travel_Delay_Minutes'] / (df['Speed_KMPH'] + 1)
 # =============================
 st.sidebar.header("🔍 Filter Data")
 
-city_filter = st.sidebar.multiselect("City", options=df["City"].unique(), default=df["City"].unique())
-vehicle_filter = st.sidebar.multiselect("Vehicle Type", options=df["Vehicle_Type"].unique(), default=df["Vehicle_Type"].unique())
-weather_filter = st.sidebar.multiselect("Weather", options=df["Weather_Condition"].unique(), default=df["Weather_Condition"].unique())
+city_filter = st.sidebar.multiselect("City", df["City"].unique(), df["City"].unique())
+vehicle_filter = st.sidebar.multiselect("Vehicle Type", df["Vehicle_Type"].unique(), df["Vehicle_Type"].unique())
+weather_filter = st.sidebar.multiselect("Weather", df["Weather_Condition"].unique(), df["Weather_Condition"].unique())
+day_filter = st.sidebar.multiselect("Day", df["Day"].unique(), df["Day"].unique())
+month_filter = st.sidebar.multiselect("Month", df["Month"].unique(), df["Month"].unique())
+speed_filter = st.sidebar.multiselect("Speed Category", df["Speed_Category"].unique(), df["Speed_Category"].unique())
+incident_filter = st.sidebar.multiselect("Incident Type", df["Incident_Type"].unique(), df["Incident_Type"].unique())
+
 peak_filter = st.sidebar.radio("Hour Type", ["All", "Peak", "Off-Peak"])
 
 filtered_df = df[
     (df["City"].isin(city_filter)) &
     (df["Vehicle_Type"].isin(vehicle_filter)) &
-    (df["Weather_Condition"].isin(weather_filter))
+    (df["Weather_Condition"].isin(weather_filter)) &
+    (df["Day"].isin(day_filter)) &
+    (df["Month"].isin(month_filter)) &
+    (df["Speed_Category"].isin(speed_filter)) &
+    (df["Incident_Type"].isin(incident_filter))
 ]
 
 if peak_filter != "All":
@@ -96,7 +104,12 @@ st.title("🚦 City Mobility & Pollution Insights Platform")
 st.subheader("📊 Filtered Data Preview")
 st.dataframe(filtered_df, use_container_width=True)
 
-# Key Stats
+# Download option
+st.download_button("📥 Download Filtered Data", filtered_df.to_csv(index=False), "filtered_data.csv")
+
+# =============================
+# QUICK STATS
+# =============================
 st.subheader("📈 Quick Stats")
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Avg Speed", f"{filtered_df['Speed_KMPH'].mean():.1f} km/h")
@@ -113,7 +126,22 @@ st.bar_chart(filtered_df["Speed_KMPH"])
 st.subheader("🚗 Vehicle Count by Type")
 st.bar_chart(filtered_df["Vehicle_Type"].value_counts())
 
-st.subheader("🌧 Weather Impact")
+st.subheader("🌧 Weather Impact (Avg Congestion)")
 st.bar_chart(filtered_df.groupby("Weather_Condition")["Congestion_Index"].mean())
 
+# =============================
+# HEATMAP (NEW)
+# =============================
+st.subheader("🔥 Traffic Correlation Heatmap")
 
+numerics = filtered_df[["Speed_KMPH","Road_Occupancy_Percent","Congestion_Index","Travel_Delay_Minutes","Delay_Factor"]]
+corr = numerics.corr()
+
+fig = px.imshow(
+    corr,
+    text_auto=True,
+    title="Correlation Heatmap (Mobility Patterns)",
+    aspect="auto",
+)
+
+st.plotly_chart(fig, use_container_width=True)
